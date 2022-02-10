@@ -1,3 +1,12 @@
+--values you can play around with
+--this makes the drift a toggle. set to false to require holding for drifting,
+--much like vMenu's drifting
+local driftIsToggle = false
+--if the value above is false, this control is used to drift
+--check https://docs.fivem.net/docs/game-references/controls/ for more info
+local controlIfToggleDisabled = 21
+
+--actual coding stuff
 local globalDriftState = false
 
 function ShowNotification(text)
@@ -6,11 +15,11 @@ function ShowNotification(text)
     DrawNotification(false, false)
 end
 
-RegisterCommand("toggledrift", function()
+function ChangeDrift(bool)
     local playerPed = PlayerPedId()
     local playerVehicle = GetVehiclePedIsIn(playerPed, false)
     if playerVehicle ~= 0 and IsVehicleOnAllWheels(playerVehicle) and GetPedInVehicleSeat(playerVehicle, -1) == playerPed then
-        globalDriftState = not GetDriftTyresEnabled(playerVehicle)
+        globalDriftState = bool
         SetDriftTyresEnabled(playerVehicle, globalDriftState)
         SetReduceDriftVehicleSuspension(playerVehicle, globalDriftState)
         if globalDriftState then
@@ -19,5 +28,25 @@ RegisterCommand("toggledrift", function()
             ShowNotification("~b~Drift is ~r~OFF")
         end
     end
-end)
-RegisterKeyMapping("toggledrift", "Toggle Drift", "keyboard", "lshift")
+end
+
+if driftIsToggle then
+    RegisterCommand("toggledrift", function()
+        local playerPed = PlayerPedId()
+        local playerVehicle = GetVehiclePedIsIn(playerPed, false)
+        ChangeDrift(not GetDriftTyresEnabled(playerVehicle))
+    end)
+    RegisterKeyMapping("toggledrift", "Toggle Drift", "keyboard", "lshift")
+else
+    Citizen.CreateThread(function()
+        while true do
+            Citizen.Wait(0)
+            if IsControlJustPressed(0, controlIfToggleDisabled) then
+                ChangeDrift(true)
+            end
+            if IsControlJustReleased(0, controlIfToggleDisabled) then
+                ChangeDrift(false)
+            end
+        end
+    end)
+end
